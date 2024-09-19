@@ -45,35 +45,42 @@ router.get('/:id', (req, res) => {
 });
 
 // create new product
-router.post('/', (req, res) => {
-  /* req.body should look like this...
-    {
-      product_name: "Basketball",
-      price: 200.00,
-      stock: 3,
-      tagIds: [1, 2, 3, 4]
-    }
-  */
-  Product.create(req.body)
-    .then((product) => {
-      // if there's product tags, we need to create pairings to bulk create in the ProductTag model
-      if (req.body.tagIds.length) {
-        const productTagIdArr = req.body.tagIds.map((tag_id) => {
-          return {
-            product_id: product.id,
-            tag_id,
-          };
-        });
-        return ProductTag.bulkCreate(productTagIdArr);
+router.post('/', async (req, res) => {
+  try {
+    const product = await Product.create(req.body);
+
+    // if there are product tags, we need to create pairings to bulk create in the ProductTag model
+    if (req.body.tagIds && req.body.tagIds.length) {
+      // Fetch existing product tags
+      const existingProductTags = await ProductTag.findAll({
+        where: { product_id: product.id }
+      });
+
+      // Create a set of existing tag IDs for quick lookup
+      const existingTagIds = new Set(existingProductTags.map(({ tag_id }) => tag_id));
+
+      // Filter out tag IDs that already exist
+      const newTagIds = req.body.tagIds.filter(tag_id => !existingTagIds.has(tag_id));
+
+      // Create pairings for new tag IDs
+      const productTagIdArr = newTagIds.map((tag_id) => {
+        return {
+          product_id: product.id,
+          tag_id,
+        };
+      });
+
+      // Bulk create new product tags
+      if (productTagIdArr.length) {
+        await ProductTag.bulkCreate(productTagIdArr);
       }
-      // if no product tags, just respond
-      res.status(200).json(product);
-    })
-    .then((productTagIds) => res.status(200).json(productTagIds))
-    .catch((err) => {
-      console.log(err);
-      res.status(400).json(err);
-    });
+    }
+
+    // if no product tags, just respond
+    res.status(200).json(product);
+  } catch (err) {
+    res.status(400).json(err);
+  }
 });
 
 // update product
