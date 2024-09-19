@@ -123,6 +123,7 @@ This will execute the seeds/index.js file, which seeds the database with categor
 
 ## Video
 
+[Screencastify Video](https://watch.screencastify.com/v/LPmagdF8GFBmEnYxuT8p)
 
 ## License
 This project is licensed under the MIT License. 
